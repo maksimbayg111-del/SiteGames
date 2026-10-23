@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Игровой Портал</title>
+  
+  <!-- Подключение Three.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <style>
+    :root {
+      --primary: #00f0ff;
+      --secondary: #7000ff;
+      --bg: #090a0f;
+      --card-bg: rgba(18, 22, 36, 0.75);
+      --border: rgba(0, 240, 255, 0.3);
+      --border-hover: rgba(0, 240, 255, 0.8);
+      --text: #ffffff;
+      --text-muted: #8a99ad;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+
+    /* Three.js canvas background */
+    #bg-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: -1;
+    }
+
+    .container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    /* Анимированная светящаяся рамка */
+    .glass-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 40px;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5),
+                  0 0 15px rgba(0, 240, 255, 0.1);
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .glass-card:hover {
+      border-color: var(--border-hover);
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.7),
+                  0 0 25px rgba(0, 240, 255, 0.3);
+    }
+
+    /* Формы авторизации / регистрации */
+    .auth-box {
+      width: 100%;
+      max-width: 440px;
+      animation: fadeIn 0.8s ease-out;
+    }
+
+    .auth-header {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+
+    .auth-header h2 {
+      font-size: 2rem;
+      letter-spacing: 1px;
+      background: linear-gradient(45deg, var(--primary), var(--secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 8px;
+    }
+
+    .input-group {
+      margin-bottom: 20px;
+      position: relative;
+    }
+
+    .input-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    .input-group input {
+      width: 100%;
+      padding: 12px 16px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      color: #fff;
+      font-size: 1rem;
+      outline: none;
+      transition: all 0.3s ease;
+    }
+
+    .input-group input:focus {
+      border-color: var(--primary);
+      background: rgba(0, 240, 255, 0.05);
+      box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
+    }
+
+    /* Кнопки */
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-primary {
+      background: linear-gradient(45deg, var(--primary), var(--secondary));
+      color: #fff;
+      box-shadow: 0 4px 15px rgba(0, 240, 255, 0.3);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 240, 255, 0.5);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+
+    .btn-social {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #fff;
+      margin-top: 10px;
+    }
+
+    .btn-social:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.3);
+      transform: translateY(-2px);
+    }
+
+    .social-divider {
+      text-align: center;
+      margin: 20px 0;
+      position: relative;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    .social-divider::before, .social-divider::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      width: 35%;
+      height: 1px;
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .social-divider::before { left: 0; }
+    .social-divider::after { right: 0; }
+
+    .auth-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 20px;
+      font-size: 0.9rem;
+    }
+
+    .auth-toggle {
+      color: var(--primary);
+      cursor: pointer;
+      text-decoration: underline;
+      transition: color 0.2s;
+    }
+
+    .auth-toggle:hover {
+      color: #fff;
+    }
+
+    /* Главная страница */
+    #main-page {
+      display: none;
+      width: 100%;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 0 20px;
+      animation: zoomIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+
+    .user-info-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding: 12px 20px;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .user-id-badge {
+      background: linear-gradient(45deg, var(--primary), var(--secondary));
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: bold;
+    }
+
+    /* Рамка Telegram */
+    .telegram-banner {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 15px;
+      padding: 20px;
+      margin-bottom: 30px;
+      background: linear-gradient(135deg, rgba(0, 136, 204, 0.2), rgba(0, 240, 255, 0.1));
+      border: 1px solid rgba(0, 136, 204, 0.5);
+      border-radius: 16px;
+      text-align: center;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .telegram-banner:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 25px rgba(0, 136, 204, 0.3);
+    }
+
+    .telegram-link {
+      color: #0088cc;
+      font-weight: bold;
+      text-decoration: none;
+      background: rgba(255, 255, 255, 0.9);
+      padding: 6px 14px;
+      border-radius: 8px;
+      transition: all 0.2s;
+    }
+
+    .telegram-link:hover {
+      background: #fff;
+      box-shadow: 0 0 12px rgba(255, 255, 255, 0.8);
+      transform: scale(1.05);
+    }
+
+    /* Список блоков игр */
+    .cards-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .game-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 25px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+
+    .game-card:hover {
+      transform: translateX(8px) scale(1.01);
+      border-color: var(--primary);
+      box-shadow: 0 5px 20px rgba(0, 240, 255, 0.2);
+    }
+
+    .game-card-content {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      font-size: 1.1rem;
+      font-weight: 500;
+    }
+
+    .action-btn {
+      padding: 8px 18px;
+      background: linear-gradient(45deg, #00f0ff, #0072ff);
+      color: #fff;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: bold;
+      transition: all 0.2s ease;
+      display: inline-block;
+    }
+
+    .action-btn:hover {
+      transform: scale(1.1);
+      box-shadow: 0 0 15px rgba(0, 240, 255, 0.6);
+    }
+
+    .card-disabled {
+      opacity: 0.6;
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .card-disabled:hover {
+      transform: none;
+      box-shadow: none;
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    /* Футер */
+    .footer-support {
+      text-align: center;
+      margin-top: 40px;
+      margin-bottom: 20px;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      animation: fadeIn 1s ease;
+    }
+
+    /* SVG Иконки */
+    .icon {
+      width: 28px;
+      height: 28px;
+      flex-shrink: 0;
+    }
+
+    .arrow-down {
+      animation: bounce 2s infinite;
+    }
+
+    /* Анимации */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes zoomIn {
+      from { opacity: 0; transform: scale(0.9); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    @keyframes bounce {
+      0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+      40% { transform: translateY(6px); }
+      60% { transform: translateY(3px); }
+    }
+
+    .hidden {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Three.js Canvas -->
+  <canvas id="bg-canvas"></canvas>
+
+  <div class="container" id="auth-container">
+    <div class="glass-card auth-box">
+      
+      <!-- Форма Регистрации -->
+      <form id="register-form">
+        <div class="auth-header">
+          <h2>Регистрация</h2>
+          <p style="color: var(--text-muted); font-size: 0.85rem;">Создайте аккаунт для доступа к играм</p>
+        </div>
+
+        <div class="input-group">
+          <label for="reg-name">Имя пользователя</label>
+          <input type="text" id="reg-name" required placeholder="Введите ваше имя">
+        </div>
+
+        <div class="input-group">
+          <label for="reg-email">Почта</label>
+          <input type="email" id="reg-email" required placeholder="example@mail.com">
+        </div>
+
+        <button type="submit" class="btn btn-primary">Зарегистрироваться</button>
+
+        <div class="social-divider">ИЛИ С ПОМОЩЬЮ</div>
+
+        <!-- Соцсети -->
+        <button type="button" class="btn btn-social" onclick="socialAuth('Google')">
+          <svg class="icon" viewBox="0 0 24 24">
+            <path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.8 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.3 9 5 12 5z"/>
+            <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.7-.2-2.3H12v4.6h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.9z"/>
+            <path fill="#FBBC05" d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.3s.2-1.6.4-2.3L1.9 7.3C.7 9.7 0 10.8 0 12.5s.7 2.8 1.9 5.2l3.7-2.9z"/>
+            <path fill="#34A853" d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.3-6.4-5.2L1.9 16C3.7 19.7 7.5 23 12 23z"/>
+          </svg>
+          Google
+        </button>
+
+        <button type="button" class="btn btn-social" onclick="socialAuth('Facebook')">
+          <svg class="icon" viewBox="0 0 24 24">
+            <path fill="#1877F2" d="M24 12a12 12 0 1 0-13.9 11.9v-8.4H7.1V12h3V9.4c0-3 1.8-4.7 4.5-4.7 1.3 0 2.7.2 2.7.2v3h-1.5c-1.5 0-2 .9-2 1.9V12h3.4l-.5 3.5h-2.9v8.4A12 12 0 0 0 24 12z"/>
+          </svg>
+          Facebook
+        </button>
+
+        <div class="auth-footer">
+          <span>Уже есть аккаунт?</span>
+          <span class="auth-toggle" onclick="toggleAuth('login')">Войти</span>
+        </div>
+      </form>
+
+      <!-- Форма Входа -->
+      <form id="login-form" class="hidden">
+        <div class="auth-header">
+          <h2>Вход</h2>
+          <p style="color: var(--text-muted); font-size: 0.85rem;">C возвращением!</p>
+        </div>
+
+        <div class="input-group">
+          <label for="login-email">Почта</label>
+          <input type="email" id="login-email" required placeholder="example@mail.com">
+        </div>
+
+        <button type="submit" class="btn btn-primary">Войти</button>
+
+        <div class="auth-footer">
+          <span>Нет аккаунта?</span>
+          <span class="auth-toggle" onclick="toggleAuth('register')">Зарегистрироваться</span>
+        </div>
+      </form>
+
+    </div>
+  </div>
+
+  <!-- Главная Страница -->
+  <div id="main-page">
+    
+    <div class="user-info-bar">
+      <div>Привет, <strong id="user-display-name">Пользователь</strong>!</div>
+      <div class="user-id-badge">ID: #<span id="user-display-id">1</span></div>
+    </div>
+
+    <!-- Telegram Баннер -->
+    <div class="telegram-banner">
+      <svg class="icon" viewBox="0 0 24 24">
+        <path fill="#0088cc" d="M12 0C5.37 0 0 5.37 0 12s5.37 12 12 12 12-5.37 12-12S18.63 0 12 0zm5.56 8.16l-1.97 9.28c-.15.68-.55.84-1.12.52l-3.05-2.25-1.47 1.42c-.16.16-.3.3-.62.3l.22-3.09 5.63-5.08c.24-.22-.05-.34-.38-.13l-6.96 4.38-3-.94c-.65-.2-.66-.65.14-.97l11.73-4.52c.54-.2 1.02.13.85.88z"/>
+      </svg>
+      <span>Наш Telegram канал — </span>
+      <a href="https://t.me/pradahtml" target="_blank" class="telegram-link">КЛИКНИТЕ</a>
+    </div>
+
+    <!-- 5 Рамок с играми -->
+    <div class="cards-stack">
+      
+      <!-- Рамка 1 -->
+      <div class="game-card">
+        <div class="game-card-content">
+          <svg class="icon" viewBox="0 0 24 24">
+            <path fill="#00f0ff" d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+          </svg>
+          <span>Хотите скачать мои игры? Вам ниже!</span>
+        </div>
+        <svg class="icon arrow-down" viewBox="0 0 24 24">
+          <path fill="#7000ff" d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/>
+        </svg>
+      </div>
+
+      <!-- Рамка 2 -->
+      <div class="game-card">
+        <div class="game-card-content">
+          <svg class="icon" viewBox="0 0 24 24">
+            <path fill="#ff007f" d="M4 6h16v12H4zm2 2v8h12V8zm2 2h2v2H8zm4 0h4v2h-4z"/>
+          </svg>
+          <span>Симулятор OC</span>
+        </div>
+        <a href="https://t.me/pradahtml/6" target="_blank" class="action-btn">ТАП</a>
+      </div>
+
+      <!-- Рамка 3 -->
+      <div class="game-card">
+        <div class="game-card-content">
+          <svg class="icon" viewBox="0 0 24 24">
+            <path fill="#ffb700" d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.85 7h10.29l1.04 3H5.81l1.04-3zM19 17H5v-4h14v4z"/>
+            <circle fill="#ffb700" cx="7.5" cy="14.5" r="1.5"/>
+            <circle fill="#ffb700" cx="16.5" cy="14.5" r="1.5"/>
+          </svg>
+          <span>Симулятор Перекупа Машин</span>
+        </div>
+        <a href="https://t.me/pradahtml/158" target="_blank" class="action-btn">ТАП</a>
+      </div>
+
+      <!-- Рамка 4 -->
+      <div class="game-card">
+        <div class="game-card-content">
+          <svg class="icon" viewBox="0 0 24 24">
+            <path fill="#00ff66" d="M21 6H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-10 7H9v2H7v-2H5v-2h2V9h2v2h2v2zm4.51 2c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm3-3c-.83 0-1.5-.67-1.5-1.5S17.67 9 18.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
+          </svg>
+          <span>Игровая Арена</span>
+        </div>
+        <a href="https://t.me/pradahtml/177" target="_blank" class="action-btn">ТАП</a>
+      </div>
+
+      <!-- Рамка 5 -->
+      <div class="game-card card-disabled">
+        <div class="game-card-content">
+          <svg class="icon" viewBox="0 0 24 24">
+            <path fill="#ff4757" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+          </svg>
+          <span>🎉 Симулятор Разрушения — <span style="color: var(--primary);">СКОРО...</span></span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Текст поддержки -->
+    <div class="footer-support">
+      Хотите поддержать разработчика? Достаточно просто пропиарить его ТГК 😉
+    </div>
+
+  </div>
+
+  <script>
+    /* ===================================================
+       1. БАЗА ДАННЫХ INDEXEDDB (Сохранение на века)
+    =================================================== */
+    let db;
+    const dbReq = indexedDB.open("GamePortalDB", 1);
+
+    dbReq.onupgradeneeded = (e) => {
+      db = e.target.result;
+      if (!db.objectStoreNames.contains("users")) {
+        // Создаем хранилище пользователей с автоинкрементом ID (начиная с 1)
+        db.createObjectStore("users", { keyPath: "id", autoIncrement: true });
+      }
+    };
+
+    dbReq.onsuccess = (e) => {
+      db = e.target.result;
+    };
+
+    dbReq.onerror = (e) => {
+      console.error("Ошибка открытия базы данных IndexedDB:", e);
+    };
+
+    function registerUser(name, email) {
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(["users"], "readwrite");
+        const store = tx.objectStore("users");
+        
+        const newUser = { name, email, createdAt: new Date() };
+        const req = store.add(newUser);
+
+        req.onsuccess = (e) => {
+          newUser.id = e.target.result; // Автоматически сгенерированный ID (1, 2, 3...)
+          resolve(newUser);
+        };
+        req.onerror = () => reject("Ошибка сохранения пользователя");
+      });
+    }
+
+    function findUserByEmail(email) {
+      return new Promise((resolve) => {
+        const tx = db.transaction(["users"], "readonly");
+        const store = tx.objectStore("users");
+        const req = store.openCursor();
+        let found = null;
+
+        req.onsuccess = (e) => {
+          const cursor = e.target.result;
+          if (cursor) {
+            if (cursor.value.email.toLowerCase() === email.toLowerCase()) {
+              found = cursor.value;
+            } else {
+              cursor.continue();
+            }
+          } else {
+            resolve(found);
+          }
+        };
+      });
+    }
+
+    /* ===================================================
+       2. ИНТЕРФЕЙС И АНИМАЦИИ ПЕРЕХОДОВ
+    =================================================== */
+    const registerForm = document.getElementById('register-form');
+    const loginForm = document.getElementById('login-form');
+    const authContainer = document.getElementById('auth-container');
+    const mainPage = document.getElementById('main-page');
+
+    function toggleAuth(type) {
+      if (type === 'login') {
+        registerForm.classList.add('hidden');
+        loginForm.classList.remove('hidden');
+      } else {
+        loginForm.classList.add('hidden');
+        registerForm.classList.remove('hidden');
+      }
+    }
+
+    async function showMainPage(user) {
+      document.getElementById('user-display-name').innerText = user.name || 'Пользователь';
+      document.getElementById('user-display-id').innerText = user.id;
+
+      // Плавное исчезновение формы входа
+      authContainer.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+      authContainer.style.opacity = '0';
+      authContainer.style.transform = 'scale(0.8)';
+
+      setTimeout(() => {
+        authContainer.classList.add('hidden');
+        mainPage.style.display = 'block';
+      }, 500);
+    }
+
+    // Обработка регистрации
+    registerForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = document.getElementById('reg-name').value;
+      const email = document.getElementById('reg-email').value;
+
+      const existing = await findUserByEmail(email);
+      if (existing) {
+        alert("Пользователь с такой почтой уже зарегистрирован! Нажмите 'Войти'.");
+        return;
+      }
+
+      const user = await registerUser(name, email);
+      showMainPage(user);
+    });
+
+    // Обработка входа
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('login-email').value;
+      const user = await findUserByEmail(email);
+
+      if (user) {
+        showMainPage(user);
+      } else {
+        alert("Пользователь с такой почтой не найден. Пройдите регистрацию.");
+      }
+    });
+
+    // Регистрация через соцсети
+    async function socialAuth(provider) {
+      const name = `${provider} User`;
+      const email = `${provider.toLowerCase()}_${Date.now()}@social.com`;
+      const user = await registerUser(name, email);
+      showMainPage(user);
+    }
+
+    /* ===================================================
+       3. THREE.JS ИНТЕРАКТИВНЫЙ 3D-ФОН
+    =================================================== */
+    const canvas = document.getElementById('bg-canvas');
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+    // Создание частиц (звездное/неоновое поле)
+    const count = 1200;
+    const geometry = new THREE.BufferGeometry();
+    const positions = new Float32Array(count * 3);
+    const colors = new Float32Array(count * 3);
+
+    for (let i = 0; i < count * 3; i += 3) {
+      positions[i] = (Math.random() - 0.5) * 15;
+      positions[i + 1] = (Math.random() - 0.5) * 15;
+      positions[i + 2] = (Math.random() - 0.5) * 15;
+
+      // Голубые и фиолетовые цвета
+      colors[i] = Math.random() > 0.5 ? 0 : 0.4; // R
+      colors[i + 1] = Math.random() * 0.8 + 0.2; // G
+      colors[i + 2] = 1;                        // B
+    }
+
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+    const material = new THREE.PointsMaterial({
+      size: 0.035,
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.8
+    });
+
+    const particles = new THREE.Points(geometry, material);
+    scene.add(particles);
+
+    camera.position.z = 5;
+
+    // Реакция на движение мыши
+    let mouseX = 0, mouseY = 0;
+    window.addEventListener('mousemove', (e) => {
+      mouseX = (e.clientX / window.innerWidth - 0.5) * 0.5;
+      mouseY = (e.clientY / window.innerHeight - 0.5) * 0.5;
+    });
+
+    // Анимация
+    const clock = new THREE.Clock();
+    function animate() {
+      requestAnimationFrame(animate);
+      const elapsedTime = clock.getElapsedTime();
+
+      particles.rotation.y = elapsedTime * 0.05;
+      particles.rotation.x = elapsedTime * 0.025;
+
+      // Плавное следование за курсором
+      camera.position.x += (mouseX - camera.position.x) * 0.05;
+      camera.position.y += (-mouseY - camera.position.y) * 0.05;
+
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    // Адаптивность окна
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
